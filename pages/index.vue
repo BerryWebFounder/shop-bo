@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <!-- 통계 카드 -->
+    <!-- 주요 통계 카드 -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- 사용자 수 -->
       <div class="card p-6">
@@ -127,6 +127,57 @@
       </div>
     </div>
 
+    <!-- 게시판 통계 카드 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- 활성 공지사항 -->
+      <div class="card p-6">
+        <div class="flex items-center">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-600">활성 공지사항</p>
+            <p class="text-3xl font-bold text-gray-900">
+              {{ formatNumber(mainStore.boardStats.activeNotices) }}
+            </p>
+            <p class="text-sm text-gray-500 mt-1">중요: {{ formatNumber(mainStore.boardStats.pinnedNotices) }}</p>
+          </div>
+          <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <Icon name="notification" size="lg" color="indigo" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 총 게시글 -->
+      <div class="card p-6">
+        <div class="flex items-center">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-600">총 게시글</p>
+            <p class="text-3xl font-bold text-gray-900">
+              {{ formatNumber(mainStore.boardStats.totalPosts) }}
+            </p>
+            <p class="text-sm text-gray-500 mt-1">일반: {{ formatNumber(mainStore.boardStats.regularPosts) }}</p>
+          </div>
+          <div class="w-12 h-12 bg-cyan-100 rounded-lg flex items-center justify-center">
+            <Icon name="post" size="lg" color="blue" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 만료된 공지사항 -->
+      <div class="card p-6">
+        <div class="flex items-center">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-600">만료된 공지</p>
+            <p class="text-3xl font-bold text-red-600">
+              {{ formatNumber(mainStore.boardStats.expiredNotices) }}
+            </p>
+            <p class="text-sm text-gray-500 mt-1">비활성화된 공지사항</p>
+          </div>
+          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+            <Icon name="close" size="lg" color="red" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 차트 및 활동 영역 -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <!-- 차트 영역 (2/3) -->
@@ -195,7 +246,7 @@
     <!-- 빠른 액션 -->
     <div class="card p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-6">빠른 액션</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <NuxtLink
             to="/products"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -221,12 +272,51 @@
         </NuxtLink>
 
         <NuxtLink
+            to="/boards"
+            class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <Icon name="boards" size="lg" color="primary" class="mb-2" />
+          <span class="text-sm font-medium text-gray-700">게시판 관리</span>
+        </NuxtLink>
+
+        <NuxtLink
             to="/analytics"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <Icon name="analytics" size="lg" color="primary" class="mb-2" />
           <span class="text-sm font-medium text-gray-700">분석 보기</span>
         </NuxtLink>
+
+        <NuxtLink
+            to="/settings"
+            class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <Icon name="settings" size="lg" color="primary" class="mb-2" />
+          <span class="text-sm font-medium text-gray-700">설정</span>
+        </NuxtLink>
+      </div>
+    </div>
+
+    <!-- 게시판 관리 요약 (처리 대기가 있을 때만 표시) -->
+    <div v-if="mainStore.boardStats.expiredNotices > 0" class="card border-l-4 border-l-red-500">
+      <div class="p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-4">
+              <Icon name="notification" size="md" color="red" />
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">만료된 공지사항이 있습니다</h3>
+              <p class="text-sm text-gray-600">
+                {{ mainStore.boardStats.expiredNotices }}개의 공지사항이 만료되어 비활성화되었습니다
+              </p>
+            </div>
+          </div>
+          <NuxtLink to="/boards" class="btn-primary">
+            <Icon name="boards" size="sm" class="mr-2" />
+            게시판 관리로 이동
+          </NuxtLink>
+        </div>
       </div>
     </div>
 
@@ -255,7 +345,7 @@ const refreshing = ref(false)
 
 // 페이지 로드 시 데이터 가져오기
 onMounted(() => {
-  mainStore.fetchDashboardData()
+  mainStore.initialize()
 })
 
 // 데이터 새로고침
@@ -284,6 +374,7 @@ const getActivityIcon = (type) => {
     order: 'orders',
     user: 'users',
     product: 'products',
+    board: 'boards',
     system: 'settings'
   }
   return iconMap[type] || 'notification'

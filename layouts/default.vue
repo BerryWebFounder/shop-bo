@@ -54,6 +54,16 @@
           </NuxtLink>
 
           <NuxtLink
+              to="/boards"
+              class="nav-link"
+              :class="$route.path.startsWith('/boards') ? 'nav-link-active' : 'nav-link-inactive'"
+              @click="mainStore.closeSidebar"
+          >
+            <Icon name="boards" size="sm" class="mr-3" />
+            게시판 관리
+          </NuxtLink>
+
+          <NuxtLink
               to="/analytics"
               class="nav-link"
               :class="$route.path.startsWith('/analytics') ? 'nav-link-active' : 'nav-link-inactive'"
@@ -163,6 +173,9 @@
         <span class="text-gray-700">로딩 중...</span>
       </div>
     </div>
+
+    <!-- 토스트 알림 -->
+    <ToastContainer />
   </div>
 </template>
 
@@ -177,8 +190,17 @@ const pageTitle = computed(() => {
     '/users': '사용자 관리',
     '/orders': '주문 관리',
     '/products': '상품 관리',
+    '/boards': '게시판 관리',
     '/analytics': '분석',
     '/settings': '설정'
+  }
+
+  // 상세 페이지 처리
+  if (route.path.startsWith('/boards/')) {
+    if (route.path.includes('/posts/')) {
+      return '게시글 관리'
+    }
+    return '게시판 관리'
   }
 
   return titleMap[route.path] || '페이지'

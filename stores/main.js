@@ -1,4 +1,6 @@
 export const useMainStore = defineStore('main', () => {
+    const api = useApi()
+
     // 사이드바 상태
     const sidebarOpen = ref(false)
 
@@ -15,53 +17,31 @@ export const useMainStore = defineStore('main', () => {
 
     // 대시보드 통계 데이터
     const dashboardStats = ref({
-        totalUsers: 1250,
-        totalOrders: 892,
-        totalProducts: 543,
-        totalRevenue: 125000,
+        totalUsers: 0,
+        totalOrders: 0,
+        totalProducts: 0,
+        totalRevenue: 0,
         growthRate: {
-            users: 12.5,
-            orders: 8.3,
-            products: -2.1,
-            revenue: 15.7
+            users: 0,
+            orders: 0,
+            products: 0,
+            revenue: 0
         }
     })
 
+    // 게시판 통계 데이터
+    const boardStats = ref({
+        totalPosts: 0,
+        regularPosts: 0,
+        totalNotices: 0,
+        activeNotices: 0,
+        pinnedNotices: 0,
+        expiredNotices: 0,
+        totalFileSize: '0 B'
+    })
+
     // 최근 활동 데이터
-    const recentActivities = ref([
-        {
-            id: 1,
-            type: 'order',
-            message: '새로운 주문이 접수되었습니다',
-            user: '김철수',
-            timestamp: '2분 전',
-            status: 'new'
-        },
-        {
-            id: 2,
-            type: 'user',
-            message: '새로운 사용자가 가입했습니다',
-            user: '이영희',
-            timestamp: '15분 전',
-            status: 'success'
-        },
-        {
-            id: 3,
-            type: 'product',
-            message: '상품 재고가 부족합니다',
-            user: '상품명: 노트북',
-            timestamp: '1시간 전',
-            status: 'warning'
-        },
-        {
-            id: 4,
-            type: 'system',
-            message: '시스템 백업이 완료되었습니다',
-            user: '시스템',
-            timestamp: '3시간 전',
-            status: 'success'
-        }
-    ])
+    const recentActivities = ref([])
 
     // Actions
     const toggleSidebar = () => {
@@ -84,6 +64,10 @@ export const useMainStore = defineStore('main', () => {
         dashboardStats.value = { ...dashboardStats.value, ...newStats }
     }
 
+    const updateBoardStats = (newStats) => {
+        boardStats.value = { ...boardStats.value, ...newStats }
+    }
+
     const addRecentActivity = (activity) => {
         recentActivities.value.unshift({
             ...activity,
@@ -97,33 +81,187 @@ export const useMainStore = defineStore('main', () => {
         }
     }
 
-    // API 호출 시뮬레이션 (실제로는 API 호출로 대체)
+    // 게시판 관련 활동 추가 헬퍼 함수들
+    const addBoardActivity = (type, boardName, userName, message) => {
+        const activityTypes = {
+            'post_created': { message: `새로운 게시글이 등록되었습니다`, status: 'new' },
+            'post_updated': { message: `게시글이 수정되었습니다`, status: 'success' },
+            'post_deleted': { message: `게시글이 삭제되었습니다`, status: 'warning' },
+            'notice_created': { message: `새로운 공지사항이 등록되었습니다`, status: 'new' },
+            'notice_updated': { message: `공지사항이 수정되었습니다`, status: 'success' },
+            'notice_deleted': { message: `공지사항이 삭제되었습니다`, status: 'warning' },
+            'notice_activated': { message: `공지사항이 활성화되었습니다`, status: 'success' },
+            'notice_deactivated': { message: `공지사항이 비활성화되었습니다`, status: 'warning' },
+            'comment_created': { message: `새로운 댓글이 작성되었습니다`, status: 'new' },
+            'file_uploaded': { message: `파일이 업로드되었습니다`, status: 'success' }
+        }
+
+        const activityConfig = activityTypes[type] || { message: message || '게시판 활동', status: 'new' }
+
+        addRecentActivity({
+            type: 'board',
+            message: message || activityConfig.message,
+            user: boardName ? `${userName} - ${boardName}` : userName,
+            status: activityConfig.status
+        })
+    }
+
+    // API 호출 함수들
     const fetchDashboardData = async () => {
         setLoading(true)
 
         try {
-            // 실제 API 호출 시뮬레이션
-            await new Promise(resolve => setTimeout(resolve, 1000))
-
-            // 랜덤 데이터 생성 (실제로는 API에서 받아올 데이터)
-            const randomStats = {
+            // 기본 대시보드 통계 (임시 데이터 - 실제로는 별도 API에서 가져올 것)
+            const mockStats = {
                 totalUsers: Math.floor(Math.random() * 1000) + 1000,
                 totalOrders: Math.floor(Math.random() * 500) + 500,
                 totalProducts: Math.floor(Math.random() * 200) + 400,
                 totalRevenue: Math.floor(Math.random() * 50000) + 100000,
                 growthRate: {
-                    users: (Math.random() * 20 - 5).toFixed(1),
-                    orders: (Math.random() * 20 - 5).toFixed(1),
-                    products: (Math.random() * 20 - 5).toFixed(1),
-                    revenue: (Math.random() * 20 - 5).toFixed(1)
+                    users: parseFloat((Math.random() * 20 - 5).toFixed(1)),
+                    orders: parseFloat((Math.random() * 20 - 5).toFixed(1)),
+                    products: parseFloat((Math.random() * 20 - 5).toFixed(1)),
+                    revenue: parseFloat((Math.random() * 20 - 5).toFixed(1))
                 }
             }
 
-            updateDashboardStats(randomStats)
+            updateDashboardStats(mockStats)
+
+            // 게시판 통계 가져오기
+            await fetchBoardStats()
+
+            // 가끔 새로운 활동 추가 (시뮬레이션)
+            if (Math.random() > 0.7) {
+                const randomActivities = [
+                    {
+                        type: 'board',
+                        message: '새로운 게시글이 등록되었습니다',
+                        user: '사용자' + Math.floor(Math.random() * 100) + ' - 자유게시판',
+                        status: 'new'
+                    },
+                    {
+                        type: 'board',
+                        message: '새로운 공지사항이 게시되었습니다',
+                        user: '관리자 - 공지사항',
+                        status: 'new'
+                    },
+                    {
+                        type: 'order',
+                        message: '새로운 주문이 접수되었습니다',
+                        user: '고객' + Math.floor(Math.random() * 100),
+                        status: 'new'
+                    },
+                    {
+                        type: 'user',
+                        message: '새로운 사용자가 가입했습니다',
+                        user: '신규회원' + Math.floor(Math.random() * 100),
+                        status: 'success'
+                    }
+                ]
+
+                const randomActivity = randomActivities[Math.floor(Math.random() * randomActivities.length)]
+                addRecentActivity(randomActivity)
+            }
+
         } catch (error) {
-            console.error('Failed to fetch dashboard data:', error)
+            console.error('대시보드 데이터 조회 실패:', error)
         } finally {
             setLoading(false)
+        }
+    }
+
+    // 게시판 통계 가져오기
+    const fetchBoardStats = async () => {
+        try {
+            const [postStats, noticeStats] = await Promise.all([
+                api.posts.getStats(),
+                api.notices.getStats()
+            ])
+
+            const combinedStats = {
+                totalPosts: (postStats.totalPosts || 0) + (noticeStats.total || 0),
+                regularPosts: postStats.regularPosts || 0,
+                totalNotices: noticeStats.total || 0,
+                activeNotices: noticeStats.active || 0,
+                pinnedNotices: noticeStats.pinned || 0,
+                expiredNotices: noticeStats.expired || 0,
+                totalFileSize: postStats.totalFileSize || '0 B'
+            }
+
+            updateBoardStats(combinedStats)
+
+        } catch (error) {
+            console.error('게시판 통계 조회 실패:', error)
+            // 에러 발생 시 기본값 유지
+        }
+    }
+
+    // 최근 활동 가져오기 (실제로는 API에서 가져올 것)
+    const fetchRecentActivities = async () => {
+        try {
+            // 임시로 기본 활동들을 설정
+            const defaultActivities = [
+                {
+                    id: 1,
+                    type: 'board',
+                    message: '새로운 공지사항이 게시되었습니다',
+                    user: '관리자 - 공지사항',
+                    timestamp: '10분 전',
+                    status: 'new'
+                },
+                {
+                    id: 2,
+                    type: 'board',
+                    message: '게시글에 새로운 댓글이 작성되었습니다',
+                    user: '김철수 - 자유게시판',
+                    timestamp: '25분 전',
+                    status: 'success'
+                },
+                {
+                    id: 3,
+                    type: 'order',
+                    message: '새로운 주문이 접수되었습니다',
+                    user: '이영희',
+                    timestamp: '1시간 전',
+                    status: 'new'
+                },
+                {
+                    id: 4,
+                    type: 'user',
+                    message: '새로운 사용자가 가입했습니다',
+                    user: '박민수',
+                    timestamp: '2시간 전',
+                    status: 'success'
+                },
+                {
+                    id: 5,
+                    type: 'system',
+                    message: '시스템 백업이 완료되었습니다',
+                    user: '시스템',
+                    timestamp: '3시간 전',
+                    status: 'success'
+                }
+            ]
+
+            // 기존 활동이 없을 때만 기본 활동 설정
+            if (recentActivities.value.length === 0) {
+                recentActivities.value = defaultActivities
+            }
+
+        } catch (error) {
+            console.error('최근 활동 조회 실패:', error)
+        }
+    }
+
+    // 전체 초기화
+    const initialize = async () => {
+        try {
+            await Promise.all([
+                fetchDashboardData(),
+                fetchRecentActivities()
+            ])
+        } catch (error) {
+            console.error('메인 스토어 초기화 실패:', error)
         }
     }
 
@@ -146,17 +284,56 @@ export const useMainStore = defineStore('main', () => {
         }, {})
     })
 
+    const boardActivitiesCount = computed(() => {
+        return recentActivities.value.filter(activity => activity.type === 'board').length
+    })
+
+    const pendingBoardActivitiesCount = computed(() => {
+        return recentActivities.value.filter(activity =>
+            activity.type === 'board' && activity.status === 'warning'
+        ).length
+    })
+
+    // 게시판 관련 통계 (computed)
+    const activeBoardsCount = computed(() => {
+        return boardStats.value.activeNotices
+    })
+
+    const totalPostsCount = computed(() => {
+        return boardStats.value.totalPosts
+    })
+
+    const publishedPostsCount = computed(() => {
+        return boardStats.value.regularPosts + boardStats.value.activeNotices
+    })
+
+    const pendingPostsCount = computed(() => {
+        return boardStats.value.expiredNotices
+    })
+
+    const pinnedPostsCount = computed(() => {
+        return boardStats.value.pinnedNotices
+    })
+
     return {
         // State
         sidebarOpen: readonly(sidebarOpen),
         loading: readonly(loading),
         user: readonly(user),
         dashboardStats: readonly(dashboardStats),
+        boardStats: readonly(boardStats),
         recentActivities: readonly(recentActivities),
 
         // Getters
         userInitials,
         recentActivitiesByType,
+        boardActivitiesCount,
+        pendingBoardActivitiesCount,
+        activeBoardsCount,
+        totalPostsCount,
+        publishedPostsCount,
+        pendingPostsCount,
+        pinnedPostsCount,
 
         // Actions
         toggleSidebar,
@@ -164,7 +341,12 @@ export const useMainStore = defineStore('main', () => {
         openSidebar,
         setLoading,
         updateDashboardStats,
+        updateBoardStats,
         addRecentActivity,
-        fetchDashboardData
+        addBoardActivity,
+        fetchDashboardData,
+        fetchBoardStats,
+        fetchRecentActivities,
+        initialize
     }
 })
