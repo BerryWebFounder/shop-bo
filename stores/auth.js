@@ -28,7 +28,13 @@ export const useAuthStore = defineStore('auth', () => {
     const getCurrentUser = async () => {
         try {
             loading.value = true
-            const response = await $usersApi('/auth/me')
+            // ✅ 직접 프록시 경로로 호출
+            const response = await $fetch('/api/auth/me', {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${$auth.getAccessToken()}`
+                }
+            })
 
             if (response.success) {
                 user.value = response.data
@@ -49,9 +55,13 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loginLoading.value = true
 
-            const response = await $usersApi('/auth/login', {
+            // ✅ 직접 프록시 경로로 호출
+            const response = await $fetch('/api/auth/login', {
                 method: 'POST',
-                body: credentials
+                body: credentials,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
 
             if (response.success) {
@@ -90,8 +100,11 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             // 서버에 로그아웃 요청
             try {
-                await $usersApi('/auth/logout', {
-                    method: 'POST'
+                await $fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${$auth.getAccessToken()}`
+                    }
                 })
             } catch (error) {
                 // 로그아웃 API 실패해도 클라이언트에서는 로그아웃 처리
@@ -114,9 +127,12 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true
 
-            const response = await $usersApi('/auth/register', {
+            const response = await $fetch('/api/auth/register', {
                 method: 'POST',
-                body: userData
+                body: userData,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
 
             if (response.success) {
@@ -148,9 +164,13 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true
 
-            const response = await $usersApi('/users/me/password', {
+            const response = await $fetch('/api/users/me/password', {
                 method: 'PUT',
-                body: passwordData
+                body: passwordData,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${$auth.getAccessToken()}`
+                }
             })
 
             if (response.success) {
@@ -173,9 +193,13 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true
 
-            const response = await $usersApi('/users/me', {
+            const response = await $fetch('/api/users/me', {
                 method: 'PUT',
-                body: profileData
+                body: profileData,
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${$auth.getAccessToken()}`
+                }
             })
 
             if (response.success) {
@@ -199,9 +223,12 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true
 
-            const response = await $usersApi('/auth/password-reset', {
+            const response = await $fetch('/api/auth/password-reset', {
                 method: 'POST',
-                body: { email }
+                body: { email },
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
 
             if (response.success) {
@@ -222,8 +249,11 @@ export const useAuthStore = defineStore('auth', () => {
     // 토큰 검증
     const validateToken = async () => {
         try {
-            const response = await $usersApi('/auth/validate-token', {
-                method: 'POST'
+            const response = await $fetch('/api/auth/validate-token', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${$auth.getAccessToken()}`
+                }
             })
 
             return response.success && response.valid
@@ -258,7 +288,7 @@ export const useAuthStore = defineStore('auth', () => {
             if (username) params.append('username', username)
             if (email) params.append('email', email)
 
-            const response = await $usersApi(`/auth/check-availability?${params.toString()}`)
+            const response = await $fetch(`/api/auth/check-availability?${params.toString()}`)
 
             if (response.success) {
                 return response.data
@@ -276,9 +306,12 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true
 
-            const endpoint = user.value.isActive ? '/users/me/deactivate' : '/users/me/activate'
-            const response = await $usersApi(endpoint, {
-                method: 'PUT'
+            const endpoint = user.value.isActive ? '/api/users/me/deactivate' : '/api/users/me/activate'
+            const response = await $fetch(endpoint, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${$auth.getAccessToken()}`
+                }
             })
 
             if (response.success) {
@@ -303,8 +336,11 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             loading.value = true
 
-            const response = await $usersApi('/users/me', {
-                method: 'DELETE'
+            const response = await $fetch('/api/users/me', {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${$auth.getAccessToken()}`
+                }
             })
 
             if (response.success) {

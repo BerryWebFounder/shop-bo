@@ -1,3 +1,4 @@
+// plugins/auth.client.js
 export default defineNuxtPlugin(() => {
     const config = useRuntimeConfig()
 
@@ -18,11 +19,17 @@ export default defineNuxtPlugin(() => {
         sameSite: 'strict'
     })
 
-    // Auth API 클라이언트 생성 (토큰 자동 갱신 기능 포함)
-    const authApi = $fetch.create({
-        baseURL: '/api', // 프록시를 통해 라우팅됨
+    // ✅ Users API 클라이언트 생성 (별도 분리)
+    const usersApi = $fetch.create({
+        baseURL: config.public.usersApiBaseUrl, // 직접 백엔드 URL 사용
 
         onRequest({ request, options }) {
+            // 개발 환경에서는 프록시 사용
+            if (process.dev) {
+                // baseURL을 '/api'로 변경하여 프록시 사용
+                options.baseURL = '/api'
+            }
+
             // 토큰이 있으면 Authorization 헤더 추가
             if (accessToken.value) {
                 options.headers = {
@@ -31,20 +38,33 @@ export default defineNuxtPlugin(() => {
                 }
             }
 
+            // Content-Type 설정
+            if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+                options.headers = {
+                    ...options.headers,
+                    'Content-Type': 'application/json'
+                }
+            }
+
             // 요청 로깅
-            console.log(`[Auth API] ${options.method || 'GET'} ${request}`)
+            console.log(`[Users API] ${options.method || 'GET'} ${request}`)
+        },
+
+        onResponse({ response }) {
+            console.log(`[Users API Response] ${response.status} ${response.url}`)
         },
 
         async onResponseError({ response, request, options }) {
-            console.error(`[Auth API Error] ${response.status} ${request}`, response._data)
+            console.error(`[Users API Error] ${response.status} ${request}`, response._data)
 
             // 401 에러 시 토큰 갱신 시도
             if (response.status === 401 && refreshToken.value) {
                 // refresh 엔드포인트 호출이 아닌 경우에만 토큰 갱신 시도
                 if (!request.toString().includes('/auth/refresh')) {
                     try {
-                        console.log('[Auth API] Attempting token refresh...')
+                        console.log('[Users API] Attempting token refresh...')
 
+                        // 프록시를 통한 갱신 요청
                         const refreshResponse = await $fetch('/api/auth/refresh', {
                             method: 'POST',
                             body: {
@@ -57,7 +77,7 @@ export default defineNuxtPlugin(() => {
                             accessToken.value = refreshResponse.data.accessToken
                             refreshToken.value = refreshResponse.data.refreshToken
 
-                            console.log('[Auth API] Token refresh successful')
+                            console.log('[Users API] Token refresh successful')
 
                             // 원래 요청 재시도 (Authorization 헤더 추가)
                             const retryOptions = {
@@ -71,20 +91,26 @@ export default defineNuxtPlugin(() => {
                             return $fetch(request, retryOptions)
                         }
                     } catch (refreshError) {
-                        console.error('[Auth API] Token refresh failed:', refreshError)
+                        console.error('[Users API] Token refresh failed:', refreshError)
                         await handleAuthFailure()
                     }
                 } else {
                     // refresh 요청 자체가 실패한 경우
-                    console.error('[Auth API] Refresh token is invalid')
+                    console.error('[Users API] Refresh token is invalid')
                     await handleAuthFailure()
                 }
             }
 
             // 403 에러 시 권한 없음 처리
             if (response.status === 403) {
-                console.warn('[Auth API] Access forbidden')
+                console.warn('[Users API] Access forbidden')
                 if (process.client) {
+                    // CORS 에러인지 확인
+                    if (response._data?.message?.includes('CORS') ||
+                        response.statusText?.includes('CORS')) {
+                        console.error('[Users API] CORS Error detected')
+                        throw new Error('CORS 정책으로 인해 요청이 차단되었습니다. 서버 설정을 확인해주세요.')
+                    }
                     await navigateTo('/unauthorized')
                 }
             }
@@ -93,7 +119,7 @@ export default defineNuxtPlugin(() => {
 
     // 인증 실패 처리
     const handleAuthFailure = async () => {
-        console.log('[Auth API] Handling authentication failure')
+        console.log('[Users API] Handling authentication failure')
         accessToken.value = null
         refreshToken.value = null
 
@@ -204,7 +230,7 @@ export default defineNuxtPlugin(() => {
             }
 
             try {
-                const response = await authApi('/auth/refresh', {
+                const response = await usersApi('/auth/refresh', {
                     method: 'POST',
                     body: {
                         refreshToken: refreshToken.value
@@ -226,7 +252,7 @@ export default defineNuxtPlugin(() => {
         // 로그인
         login: async (credentials) => {
             try {
-                const response = await authApi('/auth/login', {
+                const response = await usersApi('/auth/login', {
                     method: 'POST',
                     body: credentials
                 })
@@ -248,7 +274,7 @@ export default defineNuxtPlugin(() => {
             try {
                 // 서버에 로그아웃 요청
                 if (accessToken.value) {
-                    await authApi('/auth/logout', {
+                    await usersApi('/auth/logout', {
                         method: 'POST'
                     })
                 }
@@ -263,7 +289,7 @@ export default defineNuxtPlugin(() => {
         // 현재 사용자 정보 조회
         getCurrentUser: async () => {
             try {
-                const response = await authApi('/auth/me', {
+                const response = await usersApi('/auth/me', {
                     method: 'GET'
                 })
 
@@ -281,7 +307,7 @@ export default defineNuxtPlugin(() => {
         // 토큰 유효성 검사
         validateToken: async () => {
             try {
-                const response = await authApi('/auth/validate-token', {
+                const response = await usersApi('/auth/validate-token', {
                     method: 'POST'
                 })
 
@@ -307,7 +333,7 @@ export default defineNuxtPlugin(() => {
 
     return {
         provide: {
-            authApi,
+            usersApi, // ✅ usersApi 추가
             auth: authHelpers
         }
     }

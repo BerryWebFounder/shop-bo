@@ -1,4 +1,4 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+// nuxt.config.ts
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
@@ -21,9 +21,7 @@ export default defineNuxtConfig({
 
   // 런타임 설정
   runtimeConfig: {
-    // 서버 사이드에서만 사용 가능한 설정
     public: {
-      // 클라이언트 사이드에서도 사용 가능한 설정
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8081/api',
       usersApiBaseUrl: process.env.USERS_API_BASE_URL || 'http://localhost:8082/api',
       apiTimeout: process.env.API_TIMEOUT || 10000,
@@ -35,50 +33,83 @@ export default defineNuxtConfig({
 
   // 개발 서버 설정
   devServer: {
-    port: 3000,
+    port: 3001,
     host: '0.0.0.0'
   },
 
-  // Nitro 설정 (API 프록시)
+  // ✅ 수정된 Nitro 설정 (API 프록시)
   nitro: {
     devProxy: {
-      // Posts 서비스 프록시
+      // Posts 서비스 프록시 (수정됨)
       '/api/posts': {
         target: 'http://localhost:8081/api/posts',
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
       },
       '/api/notices': {
         target: 'http://localhost:8081/api/notices',
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
       },
       '/api/comments': {
         target: 'http://localhost:8081/api/comments',
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
       },
       '/api/files': {
         target: 'http://localhost:8081/api/files',
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
       },
 
-      // Users 서비스 프록시
+      // Users 서비스 프록시 (수정됨)
       '/api/auth': {
-        target: 'http://localhost:8082/api/auth',
+        target: 'http://localhost:8082/api', // ✅ /auth 제거
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
+        // ✅ CORS 헤더 추가
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Credentials': 'true'
+        }
       },
       '/api/users': {
-        target: 'http://localhost:8082/api/users',
+        target: 'http://localhost:8082/api', // ✅ /users 제거
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Credentials': 'true'
+        }
       },
       '/api/admin': {
-        target: 'http://localhost:8082/api/admin',
+        target: 'http://localhost:8082/api', // ✅ /admin 제거
         changeOrigin: true,
-        prependPath: false,
+        prependPath: true, // ✅ true로 변경
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Credentials': 'true'
+        }
+      }
+    }
+  },
+
+  // ✅ CORS 라우트 규칙 추가
+  routeRules: {
+    // API 라우트에 CORS 설정
+    '/api/**': {
+      cors: true,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true'
       }
     }
   },
@@ -139,22 +170,6 @@ export default defineNuxtConfig({
     '~/plugins/auth.client.js'
   ],
 
-  // 미들웨어 설정
-  routeRules: {
-    // 정적 페이지
-    '/': { prerender: false },
-
-    // API 라우트
-    '/api/**': {
-      cors: true,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-      }
-    }
-  },
-
   // 실험적 기능
   experimental: {
     payloadExtraction: false,
@@ -163,13 +178,11 @@ export default defineNuxtConfig({
 
   // 환경별 설정
   $development: {
-    // 개발 환경에서만 적용되는 설정
     devtools: { enabled: true },
     debug: true
   },
 
   $production: {
-    // 프로덕션 환경에서만 적용되는 설정
     devtools: { enabled: false },
     debug: false
   }
