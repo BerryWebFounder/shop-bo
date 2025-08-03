@@ -34,17 +34,32 @@ export default defineNuxtConfig({
 
   // 개발 서버 설정
   devServer: {
-    port: 3000,
+    port: 3001,
     host: '0.0.0.0'
   },
 
   // Nitro 설정 (API 프록시)
   nitro: {
     devProxy: {
-      '/api': {
+      '/api/posts': {
         target: 'http://localhost:8081/api',
         changeOrigin: true,
         prependPath: true,
+      },
+      '/api/auth': {
+        target: 'http://localhost:8082/api/auth', // Users 서비스 auth 엔드포인트
+        changeOrigin: true,
+        prependPath: false,
+      },
+      '/api/users': {
+        target: 'http://localhost:8082/api/users', // Users 서비스 users 엔드포인트
+        changeOrigin: true,
+        prependPath: false,
+      },
+      '/api/admin': {
+        target: 'http://localhost:8082/api/admin', // Users 서비스 admin 엔드포인트
+        changeOrigin: true,
+        prependPath: false,
       }
     }
   },

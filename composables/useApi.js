@@ -1,30 +1,45 @@
 // API 호출 헬퍼 함수
 export const useApi = () => {
-    const { $api } = useNuxtApp()
+    const { $api, $uploadApi } = useNuxtApp()
 
+    // 기본 API 호출 래퍼
     const apiCall = async (endpoint, options = {}) => {
         try {
-            if (options.method && options.method !== 'GET') {
-                return await $api[options.method.toLowerCase()](endpoint, options.body, {
-                    query: options.query,
-                    headers: options.headers
-                })
-            } else {
-                return await $api.get(endpoint, {
-                    query: options.query,
-                    headers: options.headers
-                })
-            }
+            console.log(`[useApi] Calling: ${endpoint}`, options)
+
+            const response = await $api(endpoint, {
+                method: options.method || 'GET',
+                body: options.body,
+                query: options.query,
+                headers: options.headers
+            })
+
+            console.log(`[useApi] Response:`, response)
+            return response
         } catch (error) {
-            console.error(`API Error [${endpoint}]:`, error)
+            console.error(`[useApi] Error for ${endpoint}:`, error)
+            throw error
+        }
+    }
+
+    // 파일 업로드 래퍼
+    const uploadCall = async (endpoint, formData) => {
+        try {
+            console.log(`[useApi] Upload: ${endpoint}`)
+            return await $uploadApi(endpoint, {
+                method: 'POST',
+                body: formData
+            })
+        } catch (error) {
+            console.error(`[useApi] Upload error for ${endpoint}:`, error)
             throw error
         }
     }
 
     return {
-        // 게시글 API
+        // ============ 게시글 API ============
         posts: {
-            // 게시글 목록 조회 (일반 게시글)
+            // 일반 게시글 목록 조회 (공지사항 제외)
             getAll: (params = {}) => apiCall('/posts', {
                 method: 'GET',
                 query: params
@@ -41,7 +56,7 @@ export const useApi = () => {
                 method: 'GET'
             }),
 
-            // 게시글 생성
+            // 게시글 생성 (일반 게시글 또는 공지사항)
             create: (data) => apiCall('/posts', {
                 method: 'POST',
                 body: data
@@ -76,7 +91,7 @@ export const useApi = () => {
             })
         },
 
-        // 공지사항 API
+        // ============ 공지사항 API ============
         notices: {
             // 전체 공지사항 조회
             getAll: (params = {}) => apiCall('/notices', {
@@ -143,7 +158,7 @@ export const useApi = () => {
             })
         },
 
-        // 댓글 API
+        // ============ 댓글 API ============
         comments: {
             // 게시글의 댓글 조회
             getByPostId: (postId) => apiCall(`/comments/post/${postId}`, {
@@ -190,7 +205,7 @@ export const useApi = () => {
             })
         },
 
-        // 파일 API
+        // ============ 파일 API ============
         files: {
             // 게시글의 파일 목록 조회
             getByPostId: (postId) => apiCall(`/files/post/${postId}`, {
@@ -204,27 +219,23 @@ export const useApi = () => {
 
             // 파일 업로드 (게시글)
             uploadToPost: async (postId, files) => {
-                const { $api } = useNuxtApp()
                 const formData = new FormData()
                 for (const file of files) {
                     formData.append('files', file)
                 }
-
-                return await $api.upload(`/files/upload/${postId}`, formData)
+                return await uploadCall(`/files/upload/${postId}`, formData)
             },
 
             // 파일 업로드 (공지사항)
             uploadToNotice: async (noticeId, files) => {
-                const { $api } = useNuxtApp()
                 const formData = new FormData()
                 for (const file of files) {
                     formData.append('files', file)
                 }
-
-                return await $api.upload(`/files/upload/notice/${noticeId}`, formData)
+                return await uploadCall(`/files/upload/notice/${noticeId}`, formData)
             },
 
-            // 파일 다운로드
+            // 파일 다운로드 URL 생성
             download: (storedName) => {
                 const config = useRuntimeConfig()
                 return `${config.public.apiBaseUrl}/files/download/${storedName}`

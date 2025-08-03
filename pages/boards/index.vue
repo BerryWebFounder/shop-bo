@@ -24,6 +24,27 @@
       </div>
     </div>
 
+    <!-- 연결 상태 표시 -->
+    <div v-if="connectionError" class="card border-l-4 border-l-red-500">
+      <div class="p-4">
+        <div class="flex items-center">
+          <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-4">
+            <Icon name="close" size="md" color="red" />
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">백엔드 서버 연결 실패</h3>
+            <p class="text-sm text-gray-600">{{ connectionError }}</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <button @click="retryConnection" class="btn-primary btn-sm">
+            <Icon name="analytics" size="sm" class="mr-2" />
+            다시 시도
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 통계 카드 -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <!-- 전체 게시글 -->
@@ -227,7 +248,7 @@
                   {{ post.title }}
                 </h4>
                 <p class="text-sm text-gray-500 mt-1 truncate max-w-md">
-                  {{ post.content }}
+                  {{ truncateText(post.content, 100) }}
                 </p>
               </div>
             </td>
@@ -382,6 +403,7 @@ const showNoticeModal = ref(false)
 const editingPost = ref(null)
 const deletingPost = ref(null)
 const isNoticeMode = ref(false)
+const connectionError = ref('')
 
 // 필터 상태
 const filters = ref({
@@ -397,8 +419,39 @@ let searchTimeout = null
 
 // 페이지 로드 시 데이터 초기화
 onMounted(async () => {
-  await boardsStore.initialize()
+  console.log('게시판 페이지 마운트됨')
+  await initializeData()
 })
+
+// 데이터 초기화
+const initializeData = async () => {
+  try {
+    console.log('데이터 초기화 시작')
+    connectionError.value = ''
+    await boardsStore.initialize()
+    console.log('데이터 초기화 완료')
+  } catch (error) {
+    console.error('데이터 초기화 실패:', error)
+    connectionError.value = getErrorMessage(error)
+  }
+}
+
+// 연결 재시도
+const retryConnection = async () => {
+  console.log('연결 재시도')
+  await initializeData()
+}
+
+// 에러 메시지 생성
+const getErrorMessage = (error) => {
+  if (error.message) {
+    if (error.message.includes('fetch')) {
+      return '백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.'
+    }
+    return error.message
+  }
+  return '알 수 없는 오류가 발생했습니다.'
+}
 
 // 유틸리티 함수들
 const formatNumber = (num) => {
@@ -406,18 +459,26 @@ const formatNumber = (num) => {
 }
 
 const formatDate = (dateString) => {
+  if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('ko-KR')
 }
 
 const formatTime = (dateString) => {
+  if (!dateString) return '-'
   return new Date(dateString).toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit'
   })
 }
 
+const truncateText = (text, maxLength) => {
+  if (!text) return ''
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+}
+
 // 검색 및 필터링
 const applyFilters = () => {
+  console.log('필터 적용:', filters.value)
   boardsStore.updateFilters(filters.value)
   boardsStore.fetchPosts()
 }
@@ -430,6 +491,7 @@ const debounceSearch = () => {
 }
 
 const handleSearch = () => {
+  console.log('검색 실행:', searchQuery.value)
   if (searchQuery.value.trim()) {
     boardsStore.searchPosts({
       keyword: searchQuery.value.trim(),
@@ -442,6 +504,7 @@ const handleSearch = () => {
 }
 
 const resetFilters = () => {
+  console.log('필터 초기화')
   filters.value = {
     type: 'all',
     status: 'all',
@@ -455,18 +518,27 @@ const resetFilters = () => {
 }
 
 const refreshData = async () => {
-  await Promise.all([
-    boardsStore.fetchPosts(),
-    boardsStore.fetchStats()
-  ])
+  console.log('데이터 새로고침')
+  try {
+    connectionError.value = ''
+    await Promise.all([
+      boardsStore.fetchPosts(),
+      boardsStore.fetchStats()
+    ])
+  } catch (error) {
+    console.error('데이터 새로고침 실패:', error)
+    connectionError.value = getErrorMessage(error)
+  }
 }
 
 // 페이지네이션
 const handlePageChange = (page) => {
+  console.log('페이지 변경:', page)
   boardsStore.changePage(page - 1)
 }
 
 const handlePageSizeChange = (size) => {
+  console.log('페이지 크기 변경:', size)
   boardsStore.changePageSize(size)
 }
 
@@ -479,6 +551,7 @@ const closeModal = () => {
 }
 
 const editPost = (post) => {
+  console.log('게시글 수정:', post.id)
   editingPost.value = post
   isNoticeMode.value = post.isNotice
 }
@@ -486,6 +559,8 @@ const editPost = (post) => {
 // 게시글 생성/수정
 const handleSubmit = async (postData) => {
   try {
+    console.log('게시글 저장:', postData)
+
     if (editingPost.value) {
       await boardsStore.updatePost(editingPost.value.id, postData, editingPost.value.isNotice)
     } else {
@@ -500,6 +575,7 @@ const handleSubmit = async (postData) => {
 // 공지사항 상태 토글
 const toggleStatus = async (post) => {
   try {
+    console.log('공지사항 상태 토글:', post.id)
     await boardsStore.toggleNoticeStatus(post.id)
   } catch (error) {
     console.error('상태 변경 실패:', error)
@@ -508,11 +584,13 @@ const toggleStatus = async (post) => {
 
 // 삭제 관리
 const confirmDelete = (post) => {
+  console.log('삭제 확인:', post.id)
   deletingPost.value = post
 }
 
 const handleDelete = async () => {
   try {
+    console.log('게시글 삭제:', deletingPost.value.id)
     await boardsStore.deletePost(deletingPost.value.id, deletingPost.value.isNotice)
     deletingPost.value = null
   } catch (error) {

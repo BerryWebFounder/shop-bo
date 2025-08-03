@@ -61,6 +61,8 @@ export const useBoardsStore = defineStore('boards', () => {
     const fetchPosts = async (params = {}) => {
         setLoading(true)
         try {
+            console.log('[Store] 게시글 목록 조회 시작:', params)
+
             const queryParams = {
                 page: params.page || pagination.value.page,
                 size: params.size || pagination.value.size,
@@ -76,12 +78,23 @@ export const useBoardsStore = defineStore('boards', () => {
                 response = await api.posts.getAllWithNotices(queryParams)
             }
 
-            posts.value = response.content || []
-            updatePagination(response)
+            console.log('[Store] API 응답:', response)
 
+            // Spring Data Page 객체 처리
+            if (response.content) {
+                posts.value = response.content
+                updatePagination(response)
+            } else {
+                // 배열 직접 반환인 경우 (List<Post>)
+                posts.value = Array.isArray(response) ? response : []
+                pagination.value.totalElements = posts.value.length
+            }
+
+            console.log('[Store] 처리된 게시글:', posts.value.length + '개')
             return response
+
         } catch (error) {
-            console.error('게시글 목록 조회 실패:', error)
+            console.error('[Store] 게시글 목록 조회 실패:', error)
             posts.value = []
             toast.handleApiError(error, '게시글 목록을 불러올 수 없습니다.')
             throw error
@@ -94,23 +107,40 @@ export const useBoardsStore = defineStore('boards', () => {
     const fetchPost = async (id, isNotice = false) => {
         setLoading(true)
         try {
+            console.log('[Store] 게시글 상세 조회:', id, isNotice ? '(공지사항)' : '(일반글)')
+
             let response
             if (isNotice) {
                 response = await api.notices.getById(id)
-                currentPost.value = response.notice || response.post
             } else {
                 response = await api.posts.getById(id)
-                currentPost.value = response.post
             }
 
-            // 댓글과 파일 정보도 함께 설정
+            console.log('[Store] 상세 조회 응답:', response)
+
+            // 백엔드 응답 구조에 맞춰 데이터 설정
+            if (response.post) {
+                currentPost.value = response.post
+            } else if (response.notice) {
+                currentPost.value = response.notice
+            } else {
+                // 게시글만 반환된 경우
+                currentPost.value = response
+            }
+
+            // 댓글과 파일 정보 설정
             comments.value = response.comments || []
             files.value = response.files || []
 
+            console.log('[Store] 상세 조회 완료:', currentPost.value?.title)
             return response
+
         } catch (error) {
-            console.error('게시글 상세 조회 실패:', error)
+            console.error('[Store] 게시글 상세 조회 실패:', error)
             currentPost.value = null
+            comments.value = []
+            files.value = []
+            toast.handleApiError(error, '게시글을 불러올 수 없습니다.')
             throw error
         } finally {
             setLoading(false)
@@ -121,6 +151,8 @@ export const useBoardsStore = defineStore('boards', () => {
     const createPost = async (postData) => {
         setLoading(true)
         try {
+            console.log('[Store] 게시글 생성:', postData)
+
             let response
             if (postData.isNotice) {
                 response = await api.notices.create(postData)
@@ -131,12 +163,14 @@ export const useBoardsStore = defineStore('boards', () => {
             }
 
             // 목록 새로고침
-            await fetchPosts()
-            await fetchStats()
+            await Promise.all([
+                fetchPosts(),
+                fetchStats()
+            ])
 
             return response
         } catch (error) {
-            console.error('게시글 생성 실패:', error)
+            console.error('[Store] 게시글 생성 실패:', error)
             toast.handleApiError(error, '게시글 생성에 실패했습니다.')
             throw error
         } finally {
@@ -148,6 +182,8 @@ export const useBoardsStore = defineStore('boards', () => {
     const updatePost = async (id, postData, isNotice = false) => {
         setLoading(true)
         try {
+            console.log('[Store] 게시글 수정:', id, postData, isNotice ? '(공지사항)' : '(일반글)')
+
             let response
             if (isNotice) {
                 response = await api.notices.update(id, postData)
@@ -170,7 +206,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
             return response
         } catch (error) {
-            console.error('게시글 수정 실패:', error)
+            console.error('[Store] 게시글 수정 실패:', error)
             toast.handleApiError(error, '게시글 수정에 실패했습니다.')
             throw error
         } finally {
@@ -182,6 +218,8 @@ export const useBoardsStore = defineStore('boards', () => {
     const deletePost = async (id, isNotice = false) => {
         setLoading(true)
         try {
+            console.log('[Store] 게시글 삭제:', id, isNotice ? '(공지사항)' : '(일반글)')
+
             if (isNotice) {
                 await api.notices.delete(id)
                 toast.handleSuccess('delete', '공지사항이 삭제되었습니다.')
@@ -196,11 +234,13 @@ export const useBoardsStore = defineStore('boards', () => {
             // 현재 게시글이 삭제된 게시글이면 초기화
             if (currentPost.value && currentPost.value.id === id) {
                 currentPost.value = null
+                comments.value = []
+                files.value = []
             }
 
             await fetchStats()
         } catch (error) {
-            console.error('게시글 삭제 실패:', error)
+            console.error('[Store] 게시글 삭제 실패:', error)
             toast.handleApiError(error, '게시글 삭제에 실패했습니다.')
             throw error
         } finally {
@@ -212,6 +252,8 @@ export const useBoardsStore = defineStore('boards', () => {
     const searchPosts = async (searchParams) => {
         setLoading(true)
         try {
+            console.log('[Store] 게시글 검색:', searchParams)
+
             const queryParams = {
                 page: 0,
                 size: pagination.value.size,
@@ -225,13 +267,20 @@ export const useBoardsStore = defineStore('boards', () => {
                 response = await api.posts.search(queryParams)
             }
 
-            posts.value = response.content || []
-            updatePagination(response)
+            console.log('[Store] 검색 응답:', response)
+
+            if (response.content) {
+                posts.value = response.content
+                updatePagination(response)
+            } else {
+                posts.value = Array.isArray(response) ? response : []
+            }
 
             return response
         } catch (error) {
-            console.error('게시글 검색 실패:', error)
+            console.error('[Store] 게시글 검색 실패:', error)
             posts.value = []
+            toast.handleApiError(error, '검색에 실패했습니다.')
             throw error
         } finally {
             setLoading(false)
@@ -242,6 +291,8 @@ export const useBoardsStore = defineStore('boards', () => {
     const toggleNoticeStatus = async (id) => {
         setLoading(true)
         try {
+            console.log('[Store] 공지사항 상태 토글:', id)
+
             const response = await api.notices.toggleStatus(id)
 
             // 목록에서 업데이트
@@ -260,7 +311,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
             return response
         } catch (error) {
-            console.error('공지사항 상태 토글 실패:', error)
+            console.error('[Store] 공지사항 상태 토글 실패:', error)
             toast.handleApiError(error, '공지사항 상태 변경에 실패했습니다.')
             throw error
         } finally {
@@ -273,11 +324,12 @@ export const useBoardsStore = defineStore('boards', () => {
     // 댓글 목록 조회
     const fetchComments = async (postId) => {
         try {
+            console.log('[Store] 댓글 조회:', postId)
             const response = await api.comments.getByPostId(postId)
             comments.value = response || []
             return response
         } catch (error) {
-            console.error('댓글 조회 실패:', error)
+            console.error('[Store] 댓글 조회 실패:', error)
             comments.value = []
             throw error
         }
@@ -286,6 +338,7 @@ export const useBoardsStore = defineStore('boards', () => {
     // 댓글 생성
     const createComment = async (commentData) => {
         try {
+            console.log('[Store] 댓글 생성:', commentData)
             const response = await api.comments.create(commentData)
 
             // 댓글 목록에 추가
@@ -294,7 +347,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
             return response
         } catch (error) {
-            console.error('댓글 생성 실패:', error)
+            console.error('[Store] 댓글 생성 실패:', error)
             toast.handleApiError(error, '댓글 작성에 실패했습니다.')
             throw error
         }
@@ -303,6 +356,7 @@ export const useBoardsStore = defineStore('boards', () => {
     // 댓글 수정
     const updateComment = async (id, content) => {
         try {
+            console.log('[Store] 댓글 수정:', id, content)
             const response = await api.comments.update(id, { content })
 
             // 댓글 목록에서 업데이트
@@ -315,7 +369,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
             return response
         } catch (error) {
-            console.error('댓글 수정 실패:', error)
+            console.error('[Store] 댓글 수정 실패:', error)
             toast.handleApiError(error, '댓글 수정에 실패했습니다.')
             throw error
         }
@@ -324,6 +378,7 @@ export const useBoardsStore = defineStore('boards', () => {
     // 댓글 삭제
     const deleteComment = async (id) => {
         try {
+            console.log('[Store] 댓글 삭제:', id)
             await api.comments.delete(id)
 
             // 댓글 목록에서 제거
@@ -331,7 +386,7 @@ export const useBoardsStore = defineStore('boards', () => {
             toast.handleSuccess('delete', '댓글이 삭제되었습니다.')
 
         } catch (error) {
-            console.error('댓글 삭제 실패:', error)
+            console.error('[Store] 댓글 삭제 실패:', error)
             toast.handleApiError(error, '댓글 삭제에 실패했습니다.')
             throw error
         }
@@ -342,6 +397,8 @@ export const useBoardsStore = defineStore('boards', () => {
     // 파일 목록 조회
     const fetchFiles = async (postId, isNotice = false) => {
         try {
+            console.log('[Store] 파일 조회:', postId, isNotice ? '(공지사항)' : '(일반글)')
+
             let response
             if (isNotice) {
                 response = await api.files.getByNoticeId(postId)
@@ -350,9 +407,10 @@ export const useBoardsStore = defineStore('boards', () => {
             }
 
             files.value = response || []
+            console.log('[Store] 파일 조회 완료:', files.value.length + '개')
             return response
         } catch (error) {
-            console.error('파일 조회 실패:', error)
+            console.error('[Store] 파일 조회 실패:', error)
             files.value = []
             throw error
         }
@@ -362,12 +420,16 @@ export const useBoardsStore = defineStore('boards', () => {
     const uploadFiles = async (postId, fileList, isNotice = false) => {
         setUploading(true)
         try {
+            console.log('[Store] 파일 업로드:', postId, fileList.length + '개', isNotice ? '(공지사항)' : '(일반글)')
+
             let response
             if (isNotice) {
                 response = await api.files.uploadToNotice(postId, fileList)
             } else {
                 response = await api.files.uploadToPost(postId, fileList)
             }
+
+            console.log('[Store] 업로드 응답:', response)
 
             // 파일 목록에 추가
             if (response.files) {
@@ -378,7 +440,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
             return response
         } catch (error) {
-            console.error('파일 업로드 실패:', error)
+            console.error('[Store] 파일 업로드 실패:', error)
             toast.handleApiError(error, '파일 업로드에 실패했습니다.')
             throw error
         } finally {
@@ -389,6 +451,7 @@ export const useBoardsStore = defineStore('boards', () => {
     // 파일 삭제
     const deleteFile = async (id) => {
         try {
+            console.log('[Store] 파일 삭제:', id)
             await api.files.delete(id)
 
             // 파일 목록에서 제거
@@ -396,7 +459,7 @@ export const useBoardsStore = defineStore('boards', () => {
             toast.handleSuccess('delete', '파일이 삭제되었습니다.')
 
         } catch (error) {
-            console.error('파일 삭제 실패:', error)
+            console.error('[Store] 파일 삭제 실패:', error)
             toast.handleApiError(error, '파일 삭제에 실패했습니다.')
             throw error
         }
@@ -412,8 +475,14 @@ export const useBoardsStore = defineStore('boards', () => {
     // 통계 조회
     const fetchStats = async () => {
         try {
-            const postStats = await api.posts.getStats()
-            const noticeStats = await api.notices.getStats()
+            console.log('[Store] 통계 조회')
+
+            const [postStats, noticeStats] = await Promise.all([
+                api.posts.getStats(),
+                api.notices.getStats()
+            ])
+
+            console.log('[Store] 통계 응답:', { postStats, noticeStats })
 
             stats.value = {
                 ...postStats,
@@ -428,7 +497,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
             return stats.value
         } catch (error) {
-            console.error('통계 조회 실패:', error)
+            console.error('[Store] 통계 조회 실패:', error)
             throw error
         }
     }
@@ -446,12 +515,14 @@ export const useBoardsStore = defineStore('boards', () => {
                 first: response.first || true,
                 last: response.last || true
             }
+            console.log('[Store] 페이지네이션 업데이트:', pagination.value)
         }
     }
 
     // 필터 업데이트
     const updateFilters = (newFilters) => {
         filters.value = { ...filters.value, ...newFilters }
+        console.log('[Store] 필터 업데이트:', filters.value)
     }
 
     // 필터 초기화
@@ -466,6 +537,7 @@ export const useBoardsStore = defineStore('boards', () => {
             sortBy: 'createdAt',
             sortOrder: 'desc'
         }
+        console.log('[Store] 필터 초기화')
     }
 
     // 페이지 변경
@@ -533,12 +605,14 @@ export const useBoardsStore = defineStore('boards', () => {
     // 스토어 초기화
     const initialize = async () => {
         try {
+            console.log('[Store] 스토어 초기화 시작')
             await Promise.all([
                 fetchPosts(),
                 fetchStats()
             ])
+            console.log('[Store] 스토어 초기화 완료')
         } catch (error) {
-            console.error('스토어 초기화 실패:', error)
+            console.error('[Store] 스토어 초기화 실패:', error)
         }
     }
 

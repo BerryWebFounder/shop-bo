@@ -3,8 +3,25 @@
     <!-- 환영 메시지 -->
     <div class="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg shadow-lg text-white">
       <div class="px-6 py-8">
-        <h2 class="text-2xl font-bold mb-2">안녕하세요, {{ mainStore.user.name }}님!</h2>
-        <p class="text-primary-100">오늘도 효율적인 상점 관리를 시작해보세요.</p>
+        <h2 class="text-2xl font-bold mb-2">
+          안녕하세요, {{ authStore.user?.fullName || '사용자' }}님!
+        </h2>
+        <p class="text-primary-100">
+          {{ getRoleGreeting() }} 오늘도 효율적인 상점 관리를 시작해보세요.
+        </p>
+        <div class="mt-4 flex items-center space-x-4 text-sm">
+          <div class="flex items-center">
+            <Icon name="calendar" size="sm" class="mr-1" />
+            <span>마지막 로그인: {{ formatLastLogin() }}</span>
+          </div>
+          <div class="flex items-center">
+            <Badge
+                :variant="getRoleVariant(authStore.user?.role)"
+                :text="authStore.user?.roleDisplayName"
+                size="sm"
+            />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -40,7 +57,7 @@
       </div>
 
       <!-- 주문 수 -->
-      <div class="card p-6">
+      <div class="card p-6" v-if="authStore.isModerator">
         <div class="flex items-center">
           <div class="flex-1">
             <p class="text-sm font-medium text-gray-600">총 주문</p>
@@ -69,7 +86,7 @@
       </div>
 
       <!-- 상품 수 -->
-      <div class="card p-6">
+      <div class="card p-6" v-if="authStore.isModerator">
         <div class="flex items-center">
           <div class="flex-1">
             <p class="text-sm font-medium text-gray-600">총 상품</p>
@@ -98,7 +115,7 @@
       </div>
 
       <!-- 매출 -->
-      <div class="card p-6">
+      <div class="card p-6" v-if="authStore.isAdmin">
         <div class="flex items-center">
           <div class="flex-1">
             <p class="text-sm font-medium text-gray-600">총 매출</p>
@@ -122,6 +139,22 @@
           </div>
           <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
             <Icon name="analytics" size="lg" color="yellow" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 내 활동 통계 (모든 사용자) -->
+      <div class="card p-6">
+        <div class="flex items-center">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-600">내 게시글</p>
+            <p class="text-3xl font-bold text-gray-900">
+              {{ formatNumber(userStats.postCount) }}
+            </p>
+            <p class="text-sm text-gray-500 mt-1">댓글: {{ formatNumber(userStats.commentCount) }}</p>
+          </div>
+          <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <Icon name="post" size="lg" color="indigo" />
           </div>
         </div>
       </div>
@@ -162,7 +195,7 @@
       </div>
 
       <!-- 만료된 공지사항 -->
-      <div class="card p-6">
+      <div class="card p-6" v-if="authStore.isModerator">
         <div class="flex items-center">
           <div class="flex-1">
             <p class="text-sm font-medium text-gray-600">만료된 공지</p>
@@ -184,7 +217,7 @@
       <div class="lg:col-span-2">
         <div class="card p-6">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="text-lg font-semibold text-gray-900">매출 추이</h3>
+            <h3 class="text-lg font-semibold text-gray-900">활동 추이</h3>
             <select class="form-select text-sm w-auto">
               <option>최근 7일</option>
               <option>최근 30일</option>
@@ -192,11 +225,11 @@
             </select>
           </div>
 
-          <!-- 간단한 차트 영역 (실제 차트 라이브러리로 대체 가능) -->
+          <!-- 간단한 차트 영역 -->
           <div class="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
             <div class="text-center">
               <Icon name="analytics" size="xl" color="gray" class="mx-auto mb-2" />
-              <p class="text-gray-500">차트 영역</p>
+              <p class="text-gray-500">활동 차트</p>
               <p class="text-sm text-gray-400">Chart.js나 다른 차트 라이브러리 연동</p>
             </div>
           </div>
@@ -214,7 +247,7 @@
 
         <div class="space-y-4">
           <div
-              v-for="activity in mainStore.recentActivities.slice(0, 5)"
+              v-for="activity in visibleActivities"
               :key="activity.id"
               class="flex items-start space-x-3"
           >
@@ -248,6 +281,7 @@
       <h3 class="text-lg font-semibold text-gray-900 mb-6">빠른 액션</h3>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <NuxtLink
+            v-if="authStore.isModerator"
             to="/products"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
@@ -256,6 +290,7 @@
         </NuxtLink>
 
         <NuxtLink
+            v-if="authStore.isModerator"
             to="/orders"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
@@ -264,7 +299,8 @@
         </NuxtLink>
 
         <NuxtLink
-            to="/users"
+            v-if="authStore.isAdmin"
+            to="/admin/users"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <Icon name="users" size="lg" color="primary" class="mb-2" />
@@ -280,6 +316,7 @@
         </NuxtLink>
 
         <NuxtLink
+            v-if="authStore.isModerator"
             to="/analytics"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
@@ -288,17 +325,17 @@
         </NuxtLink>
 
         <NuxtLink
-            to="/settings"
+            to="/profile"
             class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <Icon name="settings" size="lg" color="primary" class="mb-2" />
-          <span class="text-sm font-medium text-gray-700">설정</span>
+          <span class="text-sm font-medium text-gray-700">내 설정</span>
         </NuxtLink>
       </div>
     </div>
 
-    <!-- 게시판 관리 요약 (처리 대기가 있을 때만 표시) -->
-    <div v-if="mainStore.boardStats.expiredNotices > 0" class="card border-l-4 border-l-red-500">
+    <!-- 알림 메시지 (처리 대기가 있을 때만 표시) -->
+    <div v-if="mainStore.boardStats.expiredNotices > 0 && authStore.isModerator" class="card border-l-4 border-l-red-500">
       <div class="p-6">
         <div class="flex items-center justify-between">
           <div class="flex items-center">
@@ -340,24 +377,115 @@
 </template>
 
 <script setup>
+// 인증 미들웨어 적용
+definePageMeta({
+  middleware: 'auth'
+})
+
 const mainStore = useMainStore()
+const authStore = useAuthStore()
 const refreshing = ref(false)
 
-// 페이지 로드 시 데이터 가져오기
-onMounted(() => {
-  mainStore.initialize()
+// 사용자별 통계
+const userStats = ref({
+  postCount: 0,
+  commentCount: 0,
+  totalViews: 0
 })
+
+// 페이지 로드 시 데이터 가져오기
+onMounted(async () => {
+  await Promise.all([
+    mainStore.initialize(),
+    loadUserStats()
+  ])
+})
+
+// 사용자 통계 로드
+const loadUserStats = async () => {
+  try {
+    // TODO: 실제 API 호출로 사용자 활동 통계 가져오기
+    // const stats = await api.getUserActivityStats(authStore.user.id)
+
+    // 임시 데이터
+    userStats.value = {
+      postCount: Math.floor(Math.random() * 50) + 5,
+      commentCount: Math.floor(Math.random() * 100) + 10,
+      totalViews: Math.floor(Math.random() * 1000) + 50
+    }
+  } catch (error) {
+    console.error('Failed to load user stats:', error)
+  }
+}
 
 // 데이터 새로고침
 const refreshData = async () => {
   refreshing.value = true
-  await mainStore.fetchDashboardData()
+  await Promise.all([
+    mainStore.fetchDashboardData(),
+    loadUserStats()
+  ])
   refreshing.value = false
 }
 
+// 역할별 인사말
+const getRoleGreeting = () => {
+  if (!authStore.user) return ''
+
+  switch (authStore.user.role) {
+    case 'ADMIN':
+      return '시스템 관리자님,'
+    case 'SYSOP':
+      return '운영자님,'
+    default:
+      return '사용자님,'
+  }
+}
+
+// 마지막 로그인 시간 포맷
+const formatLastLogin = () => {
+  if (!authStore.user?.lastLoginAt) return '처음 로그인'
+
+  return new Date(authStore.user.lastLoginAt).toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 역할에 따른 배지 색상
+const getRoleVariant = (role) => {
+  switch (role) {
+    case 'ADMIN':
+      return 'danger'
+    case 'SYSOP':
+      return 'warning'
+    case 'USER':
+    default:
+      return 'info'
+  }
+}
+
+// 표시할 활동 목록 (권한에 따라 필터링)
+const visibleActivities = computed(() => {
+  return mainStore.recentActivities
+      .filter(activity => {
+        // 관리자는 모든 활동 보기
+        if (authStore.isAdmin) return true
+
+        // 운영자는 시스템 관련 제외하고 보기
+        if (authStore.isModerator) return activity.type !== 'system'
+
+        // 일반 사용자는 자신의 활동만 보기
+        return activity.user.includes(authStore.user?.username || '')
+      })
+      .slice(0, 5)
+})
+
 // 숫자 포맷팅
 const formatNumber = (num) => {
-  return new Intl.NumberFormat('ko-KR').format(num)
+  return new Intl.NumberFormat('ko-KR').format(num || 0)
 }
 
 // 통화 포맷팅
@@ -365,7 +493,7 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ko-KR', {
     style: 'currency',
     currency: 'KRW'
-  }).format(amount)
+  }).format(amount || 0)
 }
 
 // 활동 아이콘 가져오기

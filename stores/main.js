@@ -111,6 +111,8 @@ export const useMainStore = defineStore('main', () => {
         setLoading(true)
 
         try {
+            console.log('[MainStore] 대시보드 데이터 조회 시작')
+
             // 기본 대시보드 통계 (임시 데이터 - 실제로는 별도 API에서 가져올 것)
             const mockStats = {
                 totalUsers: Math.floor(Math.random() * 1000) + 1000,
@@ -163,8 +165,10 @@ export const useMainStore = defineStore('main', () => {
                 addRecentActivity(randomActivity)
             }
 
+            console.log('[MainStore] 대시보드 데이터 조회 완료')
+
         } catch (error) {
-            console.error('대시보드 데이터 조회 실패:', error)
+            console.error('[MainStore] 대시보드 데이터 조회 실패:', error)
         } finally {
             setLoading(false)
         }
@@ -173,10 +177,29 @@ export const useMainStore = defineStore('main', () => {
     // 게시판 통계 가져오기
     const fetchBoardStats = async () => {
         try {
+            console.log('[MainStore] 게시판 통계 조회 시작')
+
             const [postStats, noticeStats] = await Promise.all([
-                api.posts.getStats(),
-                api.notices.getStats()
+                api.posts.getStats().catch(error => {
+                    console.warn('[MainStore] 게시글 통계 조회 실패:', error)
+                    return {
+                        totalPosts: 0,
+                        regularPosts: 0,
+                        totalFileSize: '0 B'
+                    }
+                }),
+                api.notices.getStats().catch(error => {
+                    console.warn('[MainStore] 공지사항 통계 조회 실패:', error)
+                    return {
+                        total: 0,
+                        active: 0,
+                        pinned: 0,
+                        expired: 0
+                    }
+                })
             ])
+
+            console.log('[MainStore] 통계 응답:', { postStats, noticeStats })
 
             const combinedStats = {
                 totalPosts: (postStats.totalPosts || 0) + (noticeStats.total || 0),
@@ -189,9 +212,10 @@ export const useMainStore = defineStore('main', () => {
             }
 
             updateBoardStats(combinedStats)
+            console.log('[MainStore] 게시판 통계 업데이트 완료:', combinedStats)
 
         } catch (error) {
-            console.error('게시판 통계 조회 실패:', error)
+            console.error('[MainStore] 게시판 통계 조회 실패:', error)
             // 에러 발생 시 기본값 유지
         }
     }
@@ -199,6 +223,8 @@ export const useMainStore = defineStore('main', () => {
     // 최근 활동 가져오기 (실제로는 API에서 가져올 것)
     const fetchRecentActivities = async () => {
         try {
+            console.log('[MainStore] 최근 활동 조회 시작')
+
             // 임시로 기본 활동들을 설정
             const defaultActivities = [
                 {
@@ -248,20 +274,26 @@ export const useMainStore = defineStore('main', () => {
                 recentActivities.value = defaultActivities
             }
 
+            console.log('[MainStore] 최근 활동 조회 완료')
+
         } catch (error) {
-            console.error('최근 활동 조회 실패:', error)
+            console.error('[MainStore] 최근 활동 조회 실패:', error)
         }
     }
 
     // 전체 초기화
     const initialize = async () => {
         try {
+            console.log('[MainStore] 메인 스토어 초기화 시작')
+
             await Promise.all([
                 fetchDashboardData(),
                 fetchRecentActivities()
             ])
+
+            console.log('[MainStore] 메인 스토어 초기화 완료')
         } catch (error) {
-            console.error('메인 스토어 초기화 실패:', error)
+            console.error('[MainStore] 메인 스토어 초기화 실패:', error)
         }
     }
 
