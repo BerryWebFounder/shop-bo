@@ -25,6 +25,7 @@ export default defineNuxtConfig({
     public: {
       // 클라이언트 사이드에서도 사용 가능한 설정
       apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8081/api',
+      usersApiBaseUrl: process.env.USERS_API_BASE_URL || 'http://localhost:8082/api',
       apiTimeout: process.env.API_TIMEOUT || 10000,
     }
   },
@@ -34,30 +35,48 @@ export default defineNuxtConfig({
 
   // 개발 서버 설정
   devServer: {
-    port: 3001,
+    port: 3000,
     host: '0.0.0.0'
   },
 
   // Nitro 설정 (API 프록시)
   nitro: {
     devProxy: {
+      // Posts 서비스 프록시
       '/api/posts': {
-        target: 'http://localhost:8081/api',
+        target: 'http://localhost:8081/api/posts',
         changeOrigin: true,
-        prependPath: true,
+        prependPath: false,
       },
+      '/api/notices': {
+        target: 'http://localhost:8081/api/notices',
+        changeOrigin: true,
+        prependPath: false,
+      },
+      '/api/comments': {
+        target: 'http://localhost:8081/api/comments',
+        changeOrigin: true,
+        prependPath: false,
+      },
+      '/api/files': {
+        target: 'http://localhost:8081/api/files',
+        changeOrigin: true,
+        prependPath: false,
+      },
+
+      // Users 서비스 프록시
       '/api/auth': {
-        target: 'http://localhost:8082/api/auth', // Users 서비스 auth 엔드포인트
+        target: 'http://localhost:8082/api/auth',
         changeOrigin: true,
         prependPath: false,
       },
       '/api/users': {
-        target: 'http://localhost:8082/api/users', // Users 서비스 users 엔드포인트
+        target: 'http://localhost:8082/api/users',
         changeOrigin: true,
         prependPath: false,
       },
       '/api/admin': {
-        target: 'http://localhost:8082/api/admin', // Users 서비스 admin 엔드포인트
+        target: 'http://localhost:8082/api/admin',
         changeOrigin: true,
         prependPath: false,
       }
@@ -98,7 +117,7 @@ export default defineNuxtConfig({
 
   // 타입스크립트 설정
   typescript: {
-      typeCheck: false
+    typeCheck: false
   },
 
   // 컴포넌트 자동 import 설정
@@ -116,7 +135,8 @@ export default defineNuxtConfig({
 
   // 플러그인 설정
   plugins: [
-    '~/plugins/api.client.js'
+    '~/plugins/api.client.js',
+    '~/plugins/auth.client.js'
   ],
 
   // 미들웨어 설정
