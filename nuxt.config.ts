@@ -1,4 +1,3 @@
-// nuxt.config.ts
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
@@ -31,63 +30,10 @@ export default defineNuxtConfig({
     host: '0.0.0.0'
   },
 
-  // ✅ 올바른 Nitro 프록시 설정
-  nitro: {
-    devProxy: {
-      // ✅ 방법 1: 경로별로 각각 설정 (권장)
-      '/api/auth/**': {
-        target: 'http://localhost:8082/api/auth',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/auth': ''
-        }
-      },
-      '/api/users/**': {
-        target: 'http://localhost:8082/api/users',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/users': ''
-        }
-      },
-      '/api/admin/**': {
-        target: 'http://localhost:8082/api/admin',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/admin': ''
-        }
-      },
-
-      // Posts 서비스 (8081 포트)
-      '/api/posts/**': {
-        target: 'http://localhost:8081/api/posts',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/posts': ''
-        }
-      },
-      '/api/notices/**': {
-        target: 'http://localhost:8081/api/notices',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/notices': ''
-        }
-      },
-      '/api/comments/**': {
-        target: 'http://localhost:8081/api/comments',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/comments': ''
-        }
-      },
-      '/api/files/**': {
-        target: 'http://localhost:8081/api/files',
-        changeOrigin: true,
-        pathRewrite: {
-          '^/api/files': ''
-        }
-      }
-    }
-  },
+  // ✅ devProxy 제거 - server/api 사용
+  // nitro: {
+  //   devProxy: { ... }
+  // },
 
   // CORS 라우트 규칙
   routeRules: {
