@@ -189,59 +189,179 @@
               <!-- 알림 버튼 -->
               <button
                   type="button"
-                  class="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  class="relative p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500"
                   title="알림"
               >
                 <Icon name="notification" size="md" />
+                <!-- 알림 뱃지 (새로운 알림이 있을 때) -->
+                <span v-if="hasNewNotifications" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
 
-              <!-- 사용자 메뉴 -->
-              <div class="relative">
+              <!-- 사용자 메뉴 드롭다운 -->
+              <div class="relative" ref="userMenuRef">
                 <button
                     type="button"
-                    @click="showUserMenu = !showUserMenu"
-                    class="flex items-center space-x-2 p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    @click.stop="showUserMenu = !showUserMenu"
+                    class="flex items-center space-x-2 p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
                 >
+                  <!-- 사용자 아바타 -->
                   <div v-if="authStore.user" class="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
                     {{ getUserInitials(authStore.user) }}
                   </div>
                   <div v-else class="w-8 h-8 bg-gray-300 rounded-full animate-pulse"></div>
-                  <Icon name="arrow-down" size="sm" />
+
+                  <!-- 드롭다운 화살표 -->
+                  <Icon
+                      name="arrow-down"
+                      size="sm"
+                      :class="{ 'rotate-180': showUserMenu }"
+                      class="transition-transform duration-200"
+                  />
                 </button>
 
-                <!-- 사용자 드롭다운 메뉴 -->
-                <div
-                    v-if="showUserMenu"
-                    class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
-                    @click.stop
+                <!-- 드롭다운 메뉴 -->
+                <Transition
+                    enter-active-class="transition ease-out duration-200"
+                    enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100"
+                    leave-active-class="transition ease-in duration-75"
+                    leave-from-class="opacity-100 scale-100"
+                    leave-to-class="opacity-0 scale-95"
                 >
-                  <NuxtLink
-                      to="/profile"
-                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      @click="showUserMenu = false"
+                  <div
+                      v-if="showUserMenu"
+                      class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200 ring-1 ring-black ring-opacity-5"
+                      @click.stop
                   >
-                    <Icon name="users" size="sm" class="mr-2 inline" />
-                    내 프로필
-                  </NuxtLink>
+                    <!-- 사용자 정보 헤더 -->
+                    <div v-if="authStore.user" class="px-4 py-3 border-b border-gray-100">
+                      <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-medium">
+                          {{ getUserInitials(authStore.user) }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium text-gray-900 truncate">
+                            {{ authStore.user.fullName }}
+                          </p>
+                          <p class="text-xs text-gray-500 truncate">
+                            {{ authStore.user.email }}
+                          </p>
+                          <Badge
+                              :variant="getRoleVariant(authStore.user.role)"
+                              :text="authStore.user.roleDisplayName"
+                              size="sm"
+                              class="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
 
-                  <NuxtLink
-                      to="/profile/settings"
-                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      @click="showUserMenu = false"
-                  >
-                    <Icon name="settings" size="sm" class="mr-2 inline" />
-                    계정 설정
-                  </NuxtLink>
+                    <!-- 메뉴 항목들 -->
+                    <div class="py-1">
+                      <!-- 개인정보 수정 -->
+                      <button
+                          @click="goToProfile"
+                          class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                          role="menuitem"
+                      >
+                        <Icon name="users" size="sm" class="mr-3 text-gray-400" />
+                        <span>개인정보 수정</span>
+                      </button>
 
-                  <div class="border-t border-gray-100"></div>
+                      <!-- 계정 설정 -->
+                      <button
+                          @click="goToSettings"
+                          class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                          role="menuitem"
+                      >
+                        <Icon name="settings" size="sm" class="mr-3 text-gray-400" />
+                        <span>계정 설정</span>
+                      </button>
 
-                  <button
-                      @click="handleLogout"
-                      class="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50"
-                  >
-                    <Icon name="close" size="sm" class="mr-2 inline" />
-                    로그아웃
-                  </button>
+                      <!-- 내 활동 -->
+                      <button
+                          @click="goToMyActivity"
+                          class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                          role="menuitem"
+                      >
+                        <Icon name="analytics" size="sm" class="mr-3 text-gray-400" />
+                        <span>내 활동</span>
+                      </button>
+
+                      <!-- 도움말 -->
+                      <button
+                          @click="goToHelp"
+                          class="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                          role="menuitem"
+                      >
+                        <Icon name="notification" size="sm" class="mr-3 text-gray-400" />
+                        <span>도움말</span>
+                      </button>
+                    </div>
+
+                    <!-- 구분선 -->
+                    <div class="border-t border-gray-100 my-1"></div>
+
+                    <!-- 로그아웃 -->
+                    <div class="py-1">
+                      <button
+                          @click="handleLogout"
+                          class="flex items-center w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 hover:text-red-900 transition-colors"
+                          role="menuitem"
+                      >
+                        <Icon name="close" size="sm" class="mr-3 text-red-400" />
+                        <span>로그아웃</span>
+                      </button>
+                    </div>
+                  </div>
+                </Transition>
+              </div>
+            </div>
+
+            <!-- 로그아웃 확인 모달 -->
+            <div
+                v-if="showLogoutModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+                @click.self="showLogoutModal = false"
+            >
+              <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="p-6">
+                  <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mr-4">
+                      <Icon name="notification" size="lg" color="yellow" />
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-semibold text-gray-900">로그아웃 확인</h3>
+                      <p class="text-sm text-gray-500">정말 로그아웃하시겠습니까?</p>
+                    </div>
+                  </div>
+
+                  <p class="text-gray-600 mb-6">
+                    현재 작업 중인 내용이 저장되지 않을 수 있습니다.
+                  </p>
+
+                  <div class="flex justify-end space-x-3">
+                    <button
+                        type="button"
+                        @click="showLogoutModal = false"
+                        class="btn-secondary"
+                    >
+                      취소
+                    </button>
+                    <button
+                        @click="confirmLogout"
+                        class="btn-danger"
+                        :disabled="authStore.loading"
+                    >
+                      <Icon
+                          v-if="authStore.loading"
+                          name="analytics"
+                          size="sm"
+                          class="mr-2 animate-spin"
+                      />
+                      로그아웃
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -316,6 +436,7 @@ const route = useRoute()
 const router = useRouter()
 const mainStore = useMainStore()
 const authStore = useAuthStore()
+const toast = useGlobalToast()
 
 // 인증 미들웨어 적용
 definePageMeta({
@@ -325,6 +446,8 @@ definePageMeta({
 // 반응형 데이터
 const showUserMenu = ref(false)
 const showLogoutModal = ref(false)
+const hasNewNotifications = ref(false) // 새 알림 여부
+const userMenuRef = ref(null) // 드롭다운 메뉴 참조
 
 // 페이지 제목 계산
 const pageTitle = computed(() => {
@@ -337,6 +460,8 @@ const pageTitle = computed(() => {
     '/analytics': '분석',
     '/settings': '설정',
     '/profile': '내 프로필',
+    '/profile/settings': '계정 설정',
+    '/profile/activity': '내 활동',
     '/admin/users': '사용자 관리',
     '/admin/system': '시스템 관리'
   }
@@ -359,7 +484,17 @@ onMounted(async () => {
 
   // 메인 스토어 초기화
   await mainStore.initialize()
+
+  // 알림 상태 확인 (예시)
+  checkNotifications()
 })
+
+// 알림 확인 (예시 함수)
+const checkNotifications = () => {
+  // 실제로는 API에서 알림 상태를 확인
+  // 임시로 랜덤하게 설정
+  hasNewNotifications.value = Math.random() > 0.7
+}
 
 // 사용자 이니셜 생성
 const getUserInitials = (user) => {
@@ -386,6 +521,28 @@ const getRoleVariant = (role) => {
   }
 }
 
+// 네비게이션 함수들
+const goToProfile = () => {
+  showUserMenu.value = false
+  router.push('/profile')
+}
+
+const goToSettings = () => {
+  showUserMenu.value = false
+  router.push('/profile/settings')
+}
+
+const goToMyActivity = () => {
+  showUserMenu.value = false
+  router.push('/profile/activity')
+}
+
+const goToHelp = () => {
+  showUserMenu.value = false
+  // 도움말 페이지나 외부 링크로 이동
+  window.open('/help', '_blank')
+}
+
 // 로그아웃 처리
 const handleLogout = () => {
   showUserMenu.value = false
@@ -396,19 +553,42 @@ const confirmLogout = async () => {
   try {
     await authStore.logout()
     showLogoutModal.value = false
+
+    // 성공 메시지
+    toast.success('안전하게 로그아웃되었습니다.')
+
+    // 로그인 페이지로 이동
     await router.push('/login')
   } catch (error) {
     console.error('Logout failed:', error)
+    toast.error('로그아웃 중 오류가 발생했습니다.')
   }
 }
 
-// 외부 클릭시 사용자 메뉴 닫기
+const handleClickOutside = (event) => {
+  if (userMenuRef.value && !userMenuRef.value.contains(event.target)) {
+    showUserMenu.value = false
+  }
+}
+
+// 이벤트 리스너 등록/해제
 onMounted(() => {
-  document.addEventListener('click', (event) => {
-    if (showUserMenu.value) {
+  // 약간의 지연을 두고 이벤트 리스너 등록 (드롭다운 버튼 클릭과 충돌 방지)
+  nextTick(() => {
+    document.addEventListener('click', handleClickOutside)
+  })
+
+  // ESC 키로 드롭다운 닫기
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
       showUserMenu.value = false
+      showLogoutModal.value = false
     }
   })
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
 })
 
 // 반응형 사이드바 처리
@@ -424,6 +604,48 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+})
+
+// 키보드 네비게이션 (접근성 개선)
+const handleMenuKeydown = (event) => {
+  if (!showUserMenu.value) return
+
+  const menuItems = document.querySelectorAll('[role="menuitem"]')
+  const currentIndex = Array.from(menuItems).findIndex(item =>
+      item === document.activeElement
+  )
+
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault()
+      const nextIndex = currentIndex < menuItems.length - 1 ? currentIndex + 1 : 0
+      menuItems[nextIndex]?.focus()
+      break
+    case 'ArrowUp':
+      event.preventDefault()
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : menuItems.length - 1
+      menuItems[prevIndex]?.focus()
+      break
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      document.activeElement?.click()
+      break
+    case 'Escape':
+      event.preventDefault()
+      showUserMenu.value = false
+      break
+  }
+}
+
+// 드롭다운 메뉴가 열릴 때 첫 번째 항목에 포커스
+watch(showUserMenu, (isOpen) => {
+  if (isOpen) {
+    nextTick(() => {
+      const firstMenuItem = document.querySelector('[role="menuitem"]')
+      firstMenuItem?.focus()
+    })
+  }
 })
 </script>
 
