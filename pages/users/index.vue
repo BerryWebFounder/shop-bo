@@ -591,6 +591,8 @@ const toggleAllUsers = (event) => {
   }
 }
 
+// 수정이 필요한 부분 (pages/users/index.vue의 script 섹션)
+
 // 일괄 작업 처리
 const handleBulkAction = async (actionData) => {
   try {
@@ -628,8 +630,11 @@ const handleBulkAction = async (actionData) => {
     console.error('일괄 작업 실패:', error)
   }
 }
-showCreateModal.value = false
-editingUser.value = null
+
+// 모달 관리 (올바른 위치)
+const closeModal = () => {
+  showCreateModal.value = false
+  editingUser.value = null
 }
 
 const editUser = (user) => {

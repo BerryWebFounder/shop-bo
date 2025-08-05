@@ -590,6 +590,20 @@ export const useUsersStore = defineStore('users', async () => {
         console.error('[UsersStore] 스토어 초기화 실패:', error)
     }
 
+    const initialize = async () => {
+        try {
+            console.log('[UsersStore] 스토어 초기화 시작')
+            await Promise.all([
+                fetchUsers(),
+                fetchStats()
+            ])
+            console.log('[UsersStore] 스토어 초기화 완료')
+        } catch (error) {
+            console.error('[UsersStore] 스토어 초기화 실패:', error)
+            throw error
+        }
+    }
+
     return {
         // State
         loading: readonly(loading),

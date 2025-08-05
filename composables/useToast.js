@@ -58,16 +58,16 @@ export const useToast = () => {
         return addToast(message, 'info', duration)
     }
 
-    // API 에러 처리 헬퍼
-    const handleApiError = (error, customMessage = null) => {
+    // API 에러 처리 헬퍼 (수정된 버전)
+    const handleApiError = (err, customMessage = null) => {
         let message = customMessage || '오류가 발생했습니다.'
 
-        if (error?.data?.message) {
-            message = error.data.message
-        } else if (error?.message) {
-            message = error.message
-        } else if (error?.status) {
-            switch (error.status) {
+        if (err?.data?.message) {
+            message = err.data.message
+        } else if (err?.message) {
+            message = err.message
+        } else if (err?.status) {
+            switch (err.status) {
                 case 400:
                     message = '잘못된 요청입니다.'
                     break
@@ -84,11 +84,11 @@ export const useToast = () => {
                     message = '서버 내부 오류가 발생했습니다.'
                     break
                 default:
-                    message = `오류가 발생했습니다. (${error.status})`
+                    message = `오류가 발생했습니다. (${err.status})`
             }
         }
 
-        return error(message)
+        return error(message) // 이제 error는 토스트 함수를 올바르게 참조
     }
 
     // 성공 액션 처리 헬퍼
@@ -180,15 +180,16 @@ export const useGlobalToast = () => {
         return addToast(message, 'info', duration)
     }
 
-    const handleApiError = (error, customMessage = null) => {
+    // API 에러 처리 헬퍼 (수정된 버전)
+    const handleApiError = (err, customMessage = null) => {
         let message = customMessage || '오류가 발생했습니다.'
 
-        if (error?.data?.message) {
-            message = error.data.message
-        } else if (error?.message) {
-            message = error.message
-        } else if (error?.status) {
-            switch (error.status) {
+        if (err?.data?.message) {
+            message = err.data.message
+        } else if (err?.message) {
+            message = err.message
+        } else if (err?.status) {
+            switch (err.status) {
                 case 400:
                     message = '잘못된 요청입니다.'
                     break
@@ -205,11 +206,11 @@ export const useGlobalToast = () => {
                     message = '서버 내부 오류가 발생했습니다.'
                     break
                 default:
-                    message = `오류가 발생했습니다. (${error.status})`
+                    message = `오류가 발생했습니다. (${err.status})`
             }
         }
 
-        return error(message)
+        return error(message) // 이제 error는 토스트 함수를 올바르게 참조
     }
 
     const handleSuccess = (action, customMessage = null) => {
