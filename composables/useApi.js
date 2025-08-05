@@ -255,6 +255,162 @@ export const useApi = () => {
             getImages: () => apiCall('/files/images', {
                 method: 'GET'
             })
+        },
+
+        // ============ 사용자 관리 API ============
+        users: {
+            // 사용자 목록 조회
+            getAll: (params = {}) => apiCall('/users', {
+                method: 'GET',
+                query: params
+            }),
+
+            // 사용자 상세 조회
+            getById: (id) => apiCall(`/users/${id}`, {
+                method: 'GET'
+            }),
+
+            // 사용자 생성
+            create: (data) => apiCall('/users', {
+                method: 'POST',
+                body: data
+            }),
+
+            // 사용자 수정
+            update: (id, data) => apiCall(`/users/${id}`, {
+                method: 'PUT',
+                body: data
+            }),
+
+            // 사용자 삭제
+            delete: (id) => apiCall(`/users/${id}`, {
+                method: 'DELETE'
+            }),
+
+            // 사용자 상태 토글 (활성화/비활성화)
+            toggleStatus: (id) => apiCall(`/users/${id}/toggle-status`, {
+                method: 'PATCH'
+            }),
+
+            // 사용자 역할 변경
+            changeRole: (id, role) => apiCall(`/users/${id}/role`, {
+                method: 'PATCH',
+                body: { role }
+            }),
+
+            // 비밀번호 재설정
+            resetPassword: (id) => apiCall(`/users/${id}/reset-password`, {
+                method: 'POST'
+            }),
+
+            // 사용자 검색
+            search: (params = {}) => apiCall('/users/search', {
+                method: 'GET',
+                query: params
+            }),
+
+            // 사용자 통계
+            getStats: () => apiCall('/users/stats', {
+                method: 'GET'
+            }),
+
+            // 사용자명/이메일 중복 확인
+            checkAvailability: (params = {}) => apiCall('/users/check-availability', {
+                method: 'GET',
+                query: params
+            }),
+
+            // 역할별 사용자 조회
+            getByRole: (role, params = {}) => apiCall(`/users/role/${role}`, {
+                method: 'GET',
+                query: params
+            }),
+
+            // 활성/비활성 사용자 조회
+            getByStatus: (status, params = {}) => apiCall(`/users/status/${status}`, {
+                method: 'GET',
+                query: params
+            }),
+
+            // 사용자 활동 내역 조회
+            getActivity: (id, params = {}) => apiCall(`/users/${id}/activity`, {
+                method: 'GET',
+                query: params
+            }),
+
+            // 사용자 로그인 이력 조회
+            getLoginHistory: (id, params = {}) => apiCall(`/users/${id}/login-history`, {
+                method: 'GET',
+                query: params
+            }),
+
+            // 일괄 작업
+            bulkUpdate: (ids, data) => apiCall('/users/bulk-update', {
+                method: 'PATCH',
+                body: { ids, ...data }
+            }),
+
+            // 일괄 삭제
+            bulkDelete: (ids) => apiCall('/users/bulk-delete', {
+                method: 'DELETE',
+                body: { ids }
+            }),
+
+            // 일괄 상태 변경
+            bulkToggleStatus: (ids, isActive) => apiCall('/users/bulk-toggle-status', {
+                method: 'PATCH',
+                body: { ids, isActive }
+            })
+        },
+
+        // ============ 관리자 전용 API ============
+        admin: {
+            // 시스템 통계
+            getSystemStats: () => apiCall('/admin/stats', {
+                method: 'GET'
+            }),
+
+            // 시스템 설정 조회
+            getSettings: () => apiCall('/admin/settings', {
+                method: 'GET'
+            }),
+
+            // 시스템 설정 업데이트
+            updateSettings: (data) => apiCall('/admin/settings', {
+                method: 'PUT',
+                body: data
+            }),
+
+            // 시스템 로그 조회
+            getLogs: (params = {}) => apiCall('/admin/logs', {
+                method: 'GET',
+                query: params
+            }),
+
+            // 백업 생성
+            createBackup: () => apiCall('/admin/backup', {
+                method: 'POST'
+            }),
+
+            // 백업 목록 조회
+            getBackups: () => apiCall('/admin/backups', {
+                method: 'GET'
+            }),
+
+            // 백업 복원
+            restoreBackup: (backupId) => apiCall(`/admin/backups/${backupId}/restore`, {
+                method: 'POST'
+            }),
+
+            // 캐시 삭제
+            clearCache: () => apiCall('/admin/cache/clear', {
+                method: 'DELETE'
+            }),
+
+            // 시스템 상태 확인
+            getSystemHealth: () => apiCall('/admin/health', {
+                method: 'GET'
+            })
         }
     }
 }
